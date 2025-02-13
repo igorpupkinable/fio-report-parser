@@ -1,15 +1,19 @@
-const jobTitles = {
+const JOB_TITLE = {
   read: 'sequential read',
   write: 'sequential write',
   randread: 'random read',
   randwrite: 'random write',
-  rw: 'sequential mixed read and write',
+  // rw: 'sequential mixed read and write',
   // readwrite': 'sequential mixed read and write',
-  randrw: 'random mixed read and write',
+  // randrw: 'random mixed read and write',
 };
-const cacheTitles = {
+const CACHE_TITLE = {
   '0': 'Buffered I/O',
   '1': 'Non-buffered I/O (this is usually O_DIRECT)',
+};
+const OPERATION_LABEL = {
+  read: 'Read',
+  write: 'Write',
 };
 
 const ns2ms = (ns) => ns / 1000000;
@@ -27,14 +31,18 @@ if (!(filepath.startsWith('./') || filepath.startsWith('/'))) {
   filepath = `./${filepath}`;
 }
 
-console.info(`Parsing ${filepath}`);
+const parsingTitle = `Parsing ${filepath}`;
+
+console.time(parsingTitle);
 
 const report = require(filepath);
+
+console.timeEnd(parsingTitle);
 
 const globalOptions = report['global options'];
 
 console.info(`Tests were executed in ${globalOptions.directory}`);
-console.info(`${cacheTitles[globalOptions?.direct ?? 0]} was used in tests.\n`);
+console.info(`${CACHE_TITLE[globalOptions?.direct ?? 0]} was used in tests.\n`);
 
 const { errors, jobs } = report.jobs.reduce(
   (acc, job) => {
@@ -64,8 +72,7 @@ if (errors.length > 0) {
 }
 
 if (jobs.length > 0) {
-  console.info(`Successful jobs: ${jobs.length}`);
-  console.log('--------------------------------------------------');
+  console.group(`Successful jobs: ${jobs.length}`);
 
   const jobGroups = jobs.reduce(
     (acc, job) => {
@@ -75,6 +82,7 @@ if (jobs.length > 0) {
 
       if (groupName.length > 1 && Array.isArray(group)) {
         job.iodepth = jobOptions.iodepth ?? globalOptions.iodepth;
+        job.threads = jobOptions.numjobs;
         group.push(job);
       } else {
         console.warn(`Unsupported job type found: ${groupName}. Skipping.`);
@@ -87,9 +95,9 @@ if (jobs.length > 0) {
       write: [],      // Sequential writes.
       randread: [],   // Random reads.
       randwrite: [],  // Random writes.
-      rw: [],         // Sequential mixed reads and writes.
+      // rw: [],         // Sequential mixed reads and writes.
       // readwrite: [],  // Sequential mixed reads and writes.
-      randrw: [],     // Random mixed reads and writes.
+      // randrw: [],     // Random mixed reads and writes.
 
       // SSD tests. Not supported yet.
       // trim: [],           // Sequential trims (Linux block devices and SCSI character devices only).
@@ -103,16 +111,17 @@ if (jobs.length > 0) {
     const group = jobGroups[groupName];
 
     if (group.length > 0) {
-      console.info(`${group.length} ${jobTitles[groupName]} performance tests.`);
+      console.info(`${group.length} ${JOB_TITLE[groupName]} performance tests.`);
     } else {
       delete jobGroups[groupName];
     }
   });
+  console.groupEnd();
 
   Object.keys(jobGroups).forEach((groupName) => {
     const group = jobGroups[groupName];
 
-    console.info(`\nResults for ${jobTitles[groupName]} tests`);
+    console.group(`\nResults for ${JOB_TITLE[groupName]} tests`);
 
     group.forEach((job) => {
       const {
@@ -127,6 +136,7 @@ if (jobs.length > 0) {
           },
           iops: readIops,
         },
+        threads,
         write: {
           bw: writeBw,
           clat_ns: {
@@ -137,18 +147,34 @@ if (jobs.length > 0) {
           iops: writeIops,
         },
       } = job;
-      const readBandwidth = readBw / 1024;
-      const writeBandwidth = writeBw / 1024;
       const name = groupName.replace('rand', '');
 
-      if (name == 'read' || name == 'rw') {
-        console.info(`${jobname}\tQD${iodepth}\tRead\t${readBandwidth.toFixed(2)}\tMB/s\t${readIops.toFixed(0)}\tIOPS\tLatency (min/mean/max)\t${ns2ms(readLatencyMin).toFixed(1)}\tms\t${ns2ms(readLatencyMean).toFixed(1)}\tms\t${ns2ms(readLatencyMax).toFixed(1)}\tms`);
+      let bandwidth;
+      let iops;
+      let latencyMax;
+      let latencyMean;
+      let latencyMin;
+
+      if (name == 'read') {
+        bandwidth = readBw / 1024;
+        iops = readIops;
+        latencyMax = ns2ms(readLatencyMax);
+        latencyMean = ns2ms(readLatencyMean);
+        latencyMin = ns2ms(readLatencyMin);
       }
 
-      if (name == 'write' || name == 'rw') {
-        console.info(`${jobname}\tQD${iodepth}\tWrite\t${writeBandwidth.toFixed(2)}\tMB/s\t${writeIops.toFixed(0)}\tIOPS\tLatency (min/mean/max)\t${ns2ms(writeLatencyMin).toFixed(1)}\tms\t${ns2ms(writeLatencyMean).toFixed(1)}\tms\t${ns2ms(writeLatencyMax).toFixed(1)}\tms`);
+      if (name == 'write') {
+        bandwidth = writeBw / 1024;
+        iops = writeIops;
+        latencyMax = ns2ms(writeLatencyMax);
+        latencyMean = ns2ms(writeLatencyMean);
+        latencyMin = ns2ms(writeLatencyMin);
       }
+
+      console.info(`${jobname} \tQD${iodepth}\t${OPERATION_LABEL[name]}\t${bandwidth.toFixed(2)}\tMB/s\t${iops.toFixed(0)}\tIOPS\tLatency (min/mean/max)\t${latencyMin.toFixed(1)}\tms\t${latencyMean.toFixed(1)}\tms\t${latencyMax.toFixed(1)}\tms`);
     });
+
+    console.groupEnd();
   });
 
   console.log('\n');
