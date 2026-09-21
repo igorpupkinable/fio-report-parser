@@ -213,19 +213,23 @@ Object.entries(jobGroups).forEach(([k, v]) => {
     numjobs = 1,
     rw,
   }) => {
-    const dim = rw.startsWith('rand') ? '\x1b[2m' : '';
+    let intensity = '\x1b[97m'; // Bright or increased intensity
+
+    if (rw.startsWith('rand')) {
+      intensity = ''; // Normal intensity
+    }
 
     table.push({
-      [FIRST_COLUMN_HEADER]: `${dim}${jobname.replace('{qd}', iodepth).replace('{t}', numjobs)}\x1b[0m`,
-      'IO pattern': `${dim}${IO_PATTERN[rw]}\x1b[0m`,
-      'Block size': `${dim}${bs}\x1b[0m`,
-      'Queue depth': `${dim}${iodepth}\x1b[0m`,
-      'Threads': `${dim}${numjobs}\x1b[0m`,
-      'MB/s': `${dim}\x1b[95m${kiBtoMib(bw).toFixed(2)}\x1b[0m`,
-      'IOPS': `${dim}\x1b[94m${Math.round(iops)}\x1b[0m`,
-      'Min latency (ms)': `${dim}\x1b[92m${ns2ms(latencyMin).toFixed(1)}\x1b[0m`,
-      'Mean latency (ms)': `${dim}\x1b[93m${ns2ms(latencyMean).toFixed(1)}\x1b[0m`,
-      'Max latency (ms)': `${dim}\x1b[91m${ns2ms(latencyMax).toFixed(1)}\x1b[0m`,
+      [FIRST_COLUMN_HEADER]: `${intensity}${jobname.replace('{qd}', iodepth).replace('{t}', numjobs)}\x1b[0m`,
+      'IO pattern': `${intensity}${IO_PATTERN[rw]}\x1b[0m`,
+      'Block size': `${intensity}${bs}\x1b[0m`,
+      'Queue depth': `${intensity}${iodepth}\x1b[0m`,
+      'Threads': `${intensity}${numjobs}\x1b[0m`,
+      'MB/s': `${intensity}\x1b[95m${kiBtoMib(bw).toFixed(2)}\x1b[0m`,
+      'IOPS': `${intensity}\x1b[94m${Math.round(iops)}\x1b[0m`,
+      'Min latency (ms)': `${intensity}\x1b[92m${ns2ms(latencyMin).toFixed(1)}\x1b[0m`,
+      'Mean latency (ms)': `${intensity}\x1b[93m${ns2ms(latencyMean).toFixed(1)}\x1b[0m`,
+      'Max latency (ms)': `${intensity}\x1b[91m${ns2ms(latencyMax).toFixed(1)}\x1b[0m`,
     });
   });
 });
