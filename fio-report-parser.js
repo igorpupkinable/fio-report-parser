@@ -1,15 +1,7 @@
+const { resolve } = require('node:path');
+const { cwd } = require('node:process');
+
 /*
-Supported job types:
-  - read: sequential reads
-  - write: sequential writes
-  - randread: random reads
-  - randwrite: random writes
-
-Unsupported job types:
-  - rw: sequential mixed reads and writes
-  - readwrite: same as above
-  - randrw: random mixed reads and writes
-
 SSD tests. Not supported yet.
   - trim: sequential trims (Linux block devices and SCSI character devices only)
   - randtrim: random trims (Linux block devices and SCSI character devices only)
@@ -17,13 +9,13 @@ SSD tests. Not supported yet.
   - randtrimwrite: like trimwrite, but uses random offsets rather than sequential writes
 */
 const IO_PATTERN = {
-  read: 'Sequential read',
-  write: 'Sequential write',
   randread: 'Random read',
+  randrw: 'Random mixed',
   randwrite: 'Random write',
-  // rw: 'sequential mixed read and write',
-  // readwrite: 'sequential mixed read and write',
-  // randrw: 'random mixed read and write',
+  read: 'Sequential read',
+  readwrite: 'Sequential mixed',
+  rw: 'Sequential mixed',
+  write: 'Sequential write',
   // trim: sequential trims (Linux block devices and SCSI character devices only)
   // randtrim: random trims (Linux block devices and SCSI character devices only)
   // trimwrite: sequential trim+write sequences
@@ -33,8 +25,10 @@ const CACHE_TITLE = {
   '0': 'Buffered I/O',
   '1': 'Non-buffered I/O (this is usually O_DIRECT)',
 };
-const UNSUPPORTED_TYPE = '_UNSUPPORTED_';
 const FIRST_COLUMN_HEADER = 'Name';
+const MIXED = 'mixed';
+const RANDOM = 'rand';
+const UNSUPPORTED_TYPE = '_UNSUPPORTED_';
 
 const removeEscapeSequence = (str) => str.replace(/\x1b\[\d+m/g, '');
 const drawTable = (table) => {
@@ -101,7 +95,7 @@ const drawTable = (table) => {
     console.log(line.join(''));
   });
 };
-const kBtoMb = (kb) => kb / 1024;
+const kiBtoMib = (kiB) => kiB / 1024;
 const ns2ms = (ns) => ns / 1000000;
 
 if (process.argv.length === 2) {
@@ -121,7 +115,7 @@ const parsingMessage = `Parsing ${filepath}`;
 
 console.time(parsingMessage);
 
-const report = require(filepath);
+const report = require(resolve(cwd(), filepath));
 
 console.timeEnd(parsingMessage);
 
@@ -146,20 +140,55 @@ const jobs = report.jobs.reduce(
     } else {
       let type;
 
-      if (options.rw === 'read' || options.rw === 'randread') {
-        type = read;
-      } else if (options.rw === 'write' || options.rw === 'randwrite') {
-        type = write;
-      } else {
-        throw new Error(`\x1b[1m\x1b[41mUnsupported job found: ${jobname} of type ${options.rw}\x1b[0m`);
+      switch (options.rw) {
+        // Read
+        case 'randread':
+        case 'read':
+          type = read;
+          break;
+        // Read
+        case 'randwrite':
+        case 'write':
+          type = write;
+          break;
+        // Mixed
+        case 'randrw':
+        case 'readwrite':
+        case 'rw':
+          type = MIXED;
+          break;
+        default:
+          console.error(`\x1b[1m\x1b[41mUnsupported job found: ${jobname} of type ${options.rw}. Skipping...\x1b[0m`);
       }
 
-      acc.push({
-        ...globalOptions,
-        ...options,
-        ...type,
-        jobname,
-      });
+      const job = Object.assign(
+        {
+          jobname,
+        },
+        globalOptions,
+        options,
+      );
+
+      if (type === MIXED) {
+        acc.push({ // Add 'read' part of a mixed job
+          ...job,
+          ...read,
+          pattern: IO_PATTERN[job.rw],
+          rw: `${MIXED}read`,
+        });
+        acc.push({ // Add 'write' part of a mixed job
+          ...job,
+          ...write,
+          pattern: IO_PATTERN[job.rw],
+          rw: `${MIXED}write`,
+        });
+      } else {
+        acc.push({
+          ...job,
+          ...type,
+          pattern: IO_PATTERN[job.rw],
+        });
+      }
     }
 
     return acc;
@@ -175,13 +204,19 @@ if (jobs.length > 0) {
 }
 
 const jobGroups = Object.groupBy(jobs, ({ rw }) => {
-  if (IO_PATTERN[rw]) {
-    return rw.replace('rand', '');
-  } else {
-    console.warn('\x1b[33m%s\x1b[0m', `Skip unsupported job type: ${rw}`);
-
-    return UNSUPPORTED_TYPE;
+  if (IO_PATTERN[rw] && rw.startsWith(RANDOM)) {
+    return rw.replace(RANDOM, '');
+  } else if (IO_PATTERN[rw]) {
+    return rw;
   }
+
+  if (rw.startsWith(MIXED)) {
+    return rw.replace(MIXED, '');
+  }
+
+  console.warn('\x1b[33m%s\x1b[0m', `Skip unsupported job type: ${rw}`);
+
+  return UNSUPPORTED_TYPE;
 });
 const table = [];
 
@@ -198,25 +233,34 @@ Object.entries(jobGroups).forEach(([k, v]) => {
       mean: latencyMean,
       min: latencyMin,
     },
-    iodepth,
+    iodepth = 1,
     iops,
     jobname,
-    numjobs,
+    numjobs = 1,
+    pattern,
     rw,
   }) => {
-    const dim = rw.startsWith('rand') ? '\x1b[2m' : '';
+    let intensity = '\x1b[97m'; // Bright or increased intensity
+
+    if (rw.startsWith(MIXED)) {
+      intensity = '\x1b[2m'; // Faint or decreased intensity
+    }
+
+    if (rw.startsWith(RANDOM)) {
+      intensity = ''; // Normal intensity
+    }
 
     table.push({
-      [FIRST_COLUMN_HEADER]: `${dim}${jobname}\x1b[0m`,
-      'IO pattern': `${dim}${IO_PATTERN[rw]}\x1b[0m`,
-      'Block size': `${dim}\x1b[90m${bs}\x1b[0m`,
-      'Queue depth': `${dim}${iodepth}\x1b[0m`,
-      'Threads': `${dim}${numjobs}\x1b[0m`,
-      'MB/s': `${dim}\x1b[35m${kBtoMb(bw).toFixed(2)}\x1b[0m`,
-      'IOPS': `${dim}\x1b[33m${Math.round(iops)}\x1b[0m`,
-      'Min latency (ms)': `${dim}\x1b[34m${ns2ms(latencyMin).toFixed(1)}\x1b[0m`,
-      'Mean latency (ms)': `${dim}\x1b[34m${ns2ms(latencyMean).toFixed(1)}\x1b[0m`,
-      'Max latency (ms)': `${dim}\x1b[34m${ns2ms(latencyMax).toFixed(1)}\x1b[0m`,
+      [FIRST_COLUMN_HEADER]: `${intensity}${jobname.replace('{qd}', iodepth).replace('{t}', numjobs)}\x1b[0m`,
+      'IO pattern': `${intensity}${pattern}\x1b[0m`,
+      'Block size': `${intensity}${bs}\x1b[0m`,
+      'Queue depth': `${intensity}${iodepth}\x1b[0m`,
+      'Threads': `${intensity}${numjobs}\x1b[0m`,
+      'MB/s': `${intensity}\x1b[95m${kiBtoMib(bw).toFixed(2)}\x1b[0m`,
+      'IOPS': `${intensity}\x1b[94m${Math.round(iops)}\x1b[0m`,
+      'Min latency (ms)': `${intensity}\x1b[92m${ns2ms(latencyMin).toFixed(1)}\x1b[0m`,
+      'Mean latency (ms)': `${intensity}\x1b[93m${ns2ms(latencyMean).toFixed(1)}\x1b[0m`,
+      'Max latency (ms)': `${intensity}\x1b[91m${ns2ms(latencyMax).toFixed(1)}\x1b[0m`,
     });
   });
 });
