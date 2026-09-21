@@ -14,13 +14,13 @@ SSD tests. Not supported yet.
   - randtrimwrite: like trimwrite, but uses random offsets rather than sequential writes
 */
 const IO_PATTERN = {
-  read: 'Sequential read',
-  write: 'Sequential write',
   randread: 'Random read',
   randwrite: 'Random write',
   // rw: 'sequential mixed read and write',
   // readwrite: 'sequential mixed read and write',
   // randrw: 'random mixed read and write',
+  read: 'Sequential read',
+  write: 'Sequential write',
   // trim: sequential trims (Linux block devices and SCSI character devices only)
   // randtrim: random trims (Linux block devices and SCSI character devices only)
   // trimwrite: sequential trim+write sequences
@@ -30,9 +30,9 @@ const CACHE_TITLE = {
   '0': 'Buffered I/O',
   '1': 'Non-buffered I/O (this is usually O_DIRECT)',
 };
-const UNSUPPORTED_TYPE = '_UNSUPPORTED_';
 const FIRST_COLUMN_HEADER = 'Name';
 const RANDOM = 'rand';
+const UNSUPPORTED_TYPE = '_UNSUPPORTED_';
 
 const removeEscapeSequence = (str) => str.replace(/\x1b\[\d+m/g, '');
 const drawTable = (table) => {
@@ -145,12 +145,14 @@ const jobs = report.jobs.reduce(
       let type;
 
       switch (options.rw) {
-        case 'read':
+        // Read
         case 'randread':
+        case 'read':
           type = read;
           break;
-        case 'write':
+        // Read
         case 'randwrite':
+        case 'write':
           type = write;
           break;
         default:
@@ -185,13 +187,17 @@ if (jobs.length > 0) {
 }
 
 const jobGroups = Object.groupBy(jobs, ({ rw }) => {
-  if (IO_PATTERN[rw]) {
-  } else {
-    console.warn('\x1b[33m%s\x1b[0m', `Skip unsupported job type: ${rw}`);
+  if (IO_PATTERN[rw] && rw.startsWith(RANDOM)) {
     return rw.replace(RANDOM, '');
-
-    return UNSUPPORTED_TYPE;
+  } else if (IO_PATTERN[rw]) {
+    return rw;
   }
+
+  }
+
+  console.warn('\x1b[33m%s\x1b[0m', `Skip unsupported job type: ${rw}`);
+
+  return UNSUPPORTED_TYPE;
 });
 const table = [];
 
@@ -217,7 +223,7 @@ Object.entries(jobGroups).forEach(([k, v]) => {
   }) => {
     let intensity = '\x1b[97m'; // Bright or increased intensity
 
-    if (rw.startsWith('rand')) {
+    if (rw.startsWith(RANDOM)) {
       intensity = ''; // Normal intensity
     }
 
