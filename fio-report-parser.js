@@ -168,6 +168,7 @@ const jobs = report.jobs.reduce(
         acc.push({
           ...job,
           ...type,
+          pattern: IO_PATTERN[job.rw],
         });
     }
 
@@ -211,6 +212,7 @@ Object.entries(jobGroups).forEach(([k, v]) => {
     iops,
     jobname,
     numjobs = 1,
+    pattern,
     rw,
   }) => {
     let intensity = '\x1b[97m'; // Bright or increased intensity
@@ -221,7 +223,7 @@ Object.entries(jobGroups).forEach(([k, v]) => {
 
     table.push({
       [FIRST_COLUMN_HEADER]: `${intensity}${jobname.replace('{qd}', iodepth).replace('{t}', numjobs)}\x1b[0m`,
-      'IO pattern': `${intensity}${IO_PATTERN[rw]}\x1b[0m`,
+      'IO pattern': `${intensity}${pattern}\x1b[0m`,
       'Block size': `${intensity}${bs}\x1b[0m`,
       'Queue depth': `${intensity}${iodepth}\x1b[0m`,
       'Threads': `${intensity}${numjobs}\x1b[0m`,
