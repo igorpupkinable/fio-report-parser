@@ -2,11 +2,6 @@ const { resolve } = require('node:path');
 const { cwd } = require('node:process');
 
 /*
-Unsupported job types:
-  - rw: sequential mixed reads and writes
-  - readwrite: same as above
-  - randrw: random mixed reads and writes
-
 SSD tests. Not supported yet.
   - trim: sequential trims (Linux block devices and SCSI character devices only)
   - randtrim: random trims (Linux block devices and SCSI character devices only)
@@ -15,11 +10,11 @@ SSD tests. Not supported yet.
 */
 const IO_PATTERN = {
   randread: 'Random read',
+  randrw: 'Random mixed',
   randwrite: 'Random write',
-  // rw: 'sequential mixed read and write',
-  // readwrite: 'sequential mixed read and write',
-  // randrw: 'random mixed read and write',
   read: 'Sequential read',
+  readwrite: 'Sequential mixed',
+  rw: 'Sequential mixed',
   write: 'Sequential write',
   // trim: sequential trims (Linux block devices and SCSI character devices only)
   // randtrim: random trims (Linux block devices and SCSI character devices only)
@@ -31,6 +26,7 @@ const CACHE_TITLE = {
   '1': 'Non-buffered I/O (this is usually O_DIRECT)',
 };
 const FIRST_COLUMN_HEADER = 'Name';
+const MIXED = 'mixed';
 const RANDOM = 'rand';
 const UNSUPPORTED_TYPE = '_UNSUPPORTED_';
 
@@ -155,6 +151,12 @@ const jobs = report.jobs.reduce(
         case 'write':
           type = write;
           break;
+        // Mixed
+        case 'randrw':
+        case 'readwrite':
+        case 'rw':
+          type = MIXED;
+          break;
         default:
           console.error(`\x1b[1m\x1b[41mUnsupported job found: ${jobname} of type ${options.rw}. Skipping...\x1b[0m`);
       }
@@ -167,11 +169,26 @@ const jobs = report.jobs.reduce(
         options,
       );
 
+      if (type === MIXED) {
+        acc.push({ // Add 'read' part of a mixed job
+          ...job,
+          ...read,
+          pattern: IO_PATTERN[job.rw],
+          rw: `${MIXED}read`,
+        });
+        acc.push({ // Add 'write' part of a mixed job
+          ...job,
+          ...write,
+          pattern: IO_PATTERN[job.rw],
+          rw: `${MIXED}write`,
+        });
+      } else {
         acc.push({
           ...job,
           ...type,
           pattern: IO_PATTERN[job.rw],
         });
+      }
     }
 
     return acc;
@@ -193,6 +210,8 @@ const jobGroups = Object.groupBy(jobs, ({ rw }) => {
     return rw;
   }
 
+  if (rw.startsWith(MIXED)) {
+    return rw.replace(MIXED, '');
   }
 
   console.warn('\x1b[33m%s\x1b[0m', `Skip unsupported job type: ${rw}`);
@@ -222,6 +241,10 @@ Object.entries(jobGroups).forEach(([k, v]) => {
     rw,
   }) => {
     let intensity = '\x1b[97m'; // Bright or increased intensity
+
+    if (rw.startsWith(MIXED)) {
+      intensity = '\x1b[2m'; // Faint or decreased intensity
+    }
 
     if (rw.startsWith(RANDOM)) {
       intensity = ''; // Normal intensity
