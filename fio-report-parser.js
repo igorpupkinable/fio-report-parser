@@ -101,7 +101,7 @@ const drawTable = (table) => {
     console.log(line.join(''));
   });
 };
-const kBtoMb = (kb) => kb / 1024;
+const kiBtoMib = (kiB) => kiB / 1024;
 const ns2ms = (ns) => ns / 1000000;
 
 if (process.argv.length === 2) {
@@ -212,7 +212,7 @@ Object.entries(jobGroups).forEach(([k, v]) => {
       'Block size': `${dim}\x1b[90m${bs}\x1b[0m`,
       'Queue depth': `${dim}${iodepth}\x1b[0m`,
       'Threads': `${dim}${numjobs}\x1b[0m`,
-      'MB/s': `${dim}\x1b[35m${kBtoMb(bw).toFixed(2)}\x1b[0m`,
+      'MB/s': `${dim}\x1b[35m${kiBtoMib(bw).toFixed(2)}\x1b[0m`,
       'IOPS': `${dim}\x1b[33m${Math.round(iops)}\x1b[0m`,
       'Min latency (ms)': `${dim}\x1b[34m${ns2ms(latencyMin).toFixed(1)}\x1b[0m`,
       'Mean latency (ms)': `${dim}\x1b[34m${ns2ms(latencyMean).toFixed(1)}\x1b[0m`,
