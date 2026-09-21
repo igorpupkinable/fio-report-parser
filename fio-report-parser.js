@@ -2,12 +2,6 @@ const { resolve } = require('node:path');
 const { cwd } = require('node:process');
 
 /*
-Supported job types:
-  - read: sequential reads
-  - write: sequential writes
-  - randread: random reads
-  - randwrite: random writes
-
 Unsupported job types:
   - rw: sequential mixed reads and writes
   - readwrite: same as above
@@ -149,12 +143,17 @@ const jobs = report.jobs.reduce(
     } else {
       let type;
 
-      if (options.rw === 'read' || options.rw === 'randread') {
-        type = read;
-      } else if (options.rw === 'write' || options.rw === 'randwrite') {
-        type = write;
-      } else {
-        console.error(`\x1b[1m\x1b[41mUnsupported job found: ${jobname} of type ${options.rw}. Skipping...\x1b[0m`);
+      switch (options.rw) {
+        case 'read':
+        case 'randread':
+          type = read;
+          break;
+        case 'write':
+        case 'randwrite':
+          type = write;
+          break;
+        default:
+          console.error(`\x1b[1m\x1b[41mUnsupported job found: ${jobname} of type ${options.rw}. Skipping...\x1b[0m`);
       }
 
       acc.push({
