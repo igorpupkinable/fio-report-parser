@@ -201,16 +201,16 @@ Object.entries(jobGroups).forEach(([k, v]) => {
       mean: latencyMean,
       min: latencyMin,
     },
-    iodepth,
+    iodepth = 1,
     iops,
     jobname,
-    numjobs,
+    numjobs = 1,
     rw,
   }) => {
     const dim = rw.startsWith('rand') ? '\x1b[2m' : '';
 
     table.push({
-      [FIRST_COLUMN_HEADER]: `${dim}${jobname}\x1b[0m`,
+      [FIRST_COLUMN_HEADER]: `${dim}${jobname.replace('{qd}', iodepth).replace('{t}', numjobs)}\x1b[0m`,
       'IO pattern': `${dim}${IO_PATTERN[rw]}\x1b[0m`,
       'Block size': `${dim}\x1b[90m${bs}\x1b[0m`,
       'Queue depth': `${dim}${iodepth}\x1b[0m`,
