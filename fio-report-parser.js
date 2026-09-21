@@ -218,14 +218,14 @@ Object.entries(jobGroups).forEach(([k, v]) => {
     table.push({
       [FIRST_COLUMN_HEADER]: `${dim}${jobname.replace('{qd}', iodepth).replace('{t}', numjobs)}\x1b[0m`,
       'IO pattern': `${dim}${IO_PATTERN[rw]}\x1b[0m`,
-      'Block size': `${dim}\x1b[90m${bs}\x1b[0m`,
+      'Block size': `${dim}${bs}\x1b[0m`,
       'Queue depth': `${dim}${iodepth}\x1b[0m`,
       'Threads': `${dim}${numjobs}\x1b[0m`,
-      'MB/s': `${dim}\x1b[35m${kiBtoMib(bw).toFixed(2)}\x1b[0m`,
-      'IOPS': `${dim}\x1b[33m${Math.round(iops)}\x1b[0m`,
-      'Min latency (ms)': `${dim}\x1b[34m${ns2ms(latencyMin).toFixed(1)}\x1b[0m`,
-      'Mean latency (ms)': `${dim}\x1b[34m${ns2ms(latencyMean).toFixed(1)}\x1b[0m`,
-      'Max latency (ms)': `${dim}\x1b[34m${ns2ms(latencyMax).toFixed(1)}\x1b[0m`,
+      'MB/s': `${dim}\x1b[95m${kiBtoMib(bw).toFixed(2)}\x1b[0m`,
+      'IOPS': `${dim}\x1b[94m${Math.round(iops)}\x1b[0m`,
+      'Min latency (ms)': `${dim}\x1b[92m${ns2ms(latencyMin).toFixed(1)}\x1b[0m`,
+      'Mean latency (ms)': `${dim}\x1b[93m${ns2ms(latencyMean).toFixed(1)}\x1b[0m`,
+      'Max latency (ms)': `${dim}\x1b[91m${ns2ms(latencyMax).toFixed(1)}\x1b[0m`,
     });
   });
 });
