@@ -1,3 +1,6 @@
+const { resolve } = require('node:path');
+const { cwd } = require('node:process');
+
 /*
 Supported job types:
   - read: sequential reads
@@ -121,7 +124,7 @@ const parsingMessage = `Parsing ${filepath}`;
 
 console.time(parsingMessage);
 
-const report = require(filepath);
+const report = require(resolve(cwd(), filepath));
 
 console.timeEnd(parsingMessage);
 
