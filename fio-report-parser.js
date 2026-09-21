@@ -157,12 +157,18 @@ const jobs = report.jobs.reduce(
           console.error(`\x1b[1m\x1b[41mUnsupported job found: ${jobname} of type ${options.rw}. Skipping...\x1b[0m`);
       }
 
-      acc.push({
-        ...globalOptions,
-        ...options,
-        ...type,
-        jobname,
-      });
+      const job = Object.assign(
+        {
+          jobname,
+        },
+        globalOptions,
+        options,
+      );
+
+        acc.push({
+          ...job,
+          ...type,
+        });
     }
 
     return acc;
