@@ -154,7 +154,7 @@ const jobs = report.jobs.reduce(
       } else if (options.rw === 'write' || options.rw === 'randwrite') {
         type = write;
       } else {
-        throw new Error(`\x1b[1m\x1b[41mUnsupported job found: ${jobname} of type ${options.rw}\x1b[0m`);
+        console.error(`\x1b[1m\x1b[41mUnsupported job found: ${jobname} of type ${options.rw}. Skipping...\x1b[0m`);
       }
 
       acc.push({
