@@ -32,6 +32,7 @@ const CACHE_TITLE = {
 };
 const UNSUPPORTED_TYPE = '_UNSUPPORTED_';
 const FIRST_COLUMN_HEADER = 'Name';
+const RANDOM = 'rand';
 
 const removeEscapeSequence = (str) => str.replace(/\x1b\[\d+m/g, '');
 const drawTable = (table) => {
@@ -178,9 +179,9 @@ if (jobs.length > 0) {
 
 const jobGroups = Object.groupBy(jobs, ({ rw }) => {
   if (IO_PATTERN[rw]) {
-    return rw.replace('rand', '');
   } else {
     console.warn('\x1b[33m%s\x1b[0m', `Skip unsupported job type: ${rw}`);
+    return rw.replace(RANDOM, '');
 
     return UNSUPPORTED_TYPE;
   }
