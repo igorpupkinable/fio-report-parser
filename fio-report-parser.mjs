@@ -100,9 +100,13 @@ const drawTable = (table) => {
 const kiBtoMib = (kiB) => kiB / 1024;
 const ns2ms = (ns) => ns / 1000000;
 
-  console.error('\x1b[31m%s\x1b[0m', 'Please provide FIO test results in JSON format.');
-  console.log('\x1b[33mExample:\x1b[0m %s', `node ${path.basename(import.meta.url)} ./path/to/report.json`);
 if (CLIARGS.length === 2) {
+  const baseFilename = path.basename(import.meta.url);
+
+  onsole.error('\x1b[31m%s\x1b[0m', 'Please provide FIO test results in JSON format.');
+  console.log('\x1b[33mExamples:\x1b[0m');
+  console.log('\t', `node ${baseFilename} ../path/to/report.json`);
+  console.log('\t', `node ${baseFilename} ~/path/to/report.json`);
 
   process.exit(1);
 }
