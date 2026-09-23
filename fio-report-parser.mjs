@@ -197,6 +197,10 @@ const TABLE_CONFIG = {
 const tableData = [HEADERS];
 
 Object.entries(jobGroups).forEach(([k, v]) => {
+  const groupRow = Array(HEADERS.length - 1).fill('');
+
+  groupRow.unshift(`\x1b[100m[${k.toUpperCase()}]\x1b[0m`);
+  tableData.push(groupRow);
   v.forEach(({
     bs,
     bw,
