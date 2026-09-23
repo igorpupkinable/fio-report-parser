@@ -173,76 +173,76 @@ const jobGroups = Object.groupBy(jobs, ({ rw }) => {
 
 delete jobGroups[UNSUPPORTED_TYPE];
 
-const ALIGNMENT_LEFT = 'left';
-const TABLE_CONFIG = {
-  columnDefault: {
-    alignment: 'right',
-  },
-  columns: [
-    { alignment: ALIGNMENT_LEFT },
-    {}, // IO pattern
-    { width: HEADERS[2].length },
-    { width: HEADERS[3].length },
-    { width: HEADERS[4].length },
-    {}, // Bandwidth
-    {}, // IOPS
-    { width: HEADERS[7].length },
-    { width: HEADERS[8].length },
-    { width: HEADERS[9].length },
-  ],
-  drawHorizontalLine: (lineIndex, rowCount) => {
-    return lineIndex === 0 || lineIndex === 1 || lineIndex === rowCount;
-  },
-  spanningCells: HEADERS.map((header, index) => ({ col: index, row: 0, colSpan: 1, alignment: index === 0 ? ALIGNMENT_LEFT : 'center' }))
-};
-const tableData = [HEADERS];
-
-Object.entries(jobGroups).forEach(([k, v]) => {
-  const groupRow = Array(HEADERS.length - 1).fill('');
-
-  groupRow.unshift(`\x1b[100m[${k.toUpperCase()}]\x1b[0m`);
-  tableData.push(groupRow);
-  v.forEach(({
-    bs,
-    bw,
-    clat_ns: {
-      max: latencyMax,
-      mean: latencyMean,
-      min: latencyMin,
+  const ALIGNMENT_LEFT = 'left';
+  const TABLE_CONFIG = {
+    columnDefault: {
+      alignment: 'right',
     },
-    iodepth = 1,
-    iops,
-    jobname,
-    numjobs = 1,
-    pattern,
-    rw,
-  }) => {
-    let intensity = '\x1b[97m'; // Bright or increased intensity
+    columns: [
+      { alignment: ALIGNMENT_LEFT },
+      {}, // IO pattern
+      { width: HEADERS[2].length },
+      { width: HEADERS[3].length },
+      { width: HEADERS[4].length },
+      {}, // Bandwidth
+      {}, // IOPS
+      { width: HEADERS[7].length },
+      { width: HEADERS[8].length },
+      { width: HEADERS[9].length },
+    ],
+    drawHorizontalLine: (lineIndex, rowCount) => {
+      return lineIndex === 0 || lineIndex === 1 || lineIndex === rowCount;
+    },
+    spanningCells: HEADERS.map((header, index) => ({ col: index, row: 0, colSpan: 1, alignment: index === 0 ? ALIGNMENT_LEFT : 'center' }))
+  };
+  const tableData = [HEADERS];
 
-    if (rw.startsWith(MIXED)) {
-      intensity = '\x1b[2m'; // Faint or decreased intensity
-    }
+  Object.entries(jobGroups).forEach(([k, v]) => {
+    const groupRow = Array(HEADERS.length - 1).fill('');
 
-    if (rw.startsWith(RANDOM)) {
-      intensity = ''; // Normal intensity
-    }
+    groupRow.unshift(`\x1b[100m[${k.toUpperCase()}]\x1b[0m`);
+    tableData.push(groupRow);
+    v.forEach(({
+      bs,
+      bw,
+      clat_ns: {
+        max: latencyMax,
+        mean: latencyMean,
+        min: latencyMin,
+      },
+      iodepth = 1,
+      iops,
+      jobname,
+      numjobs = 1,
+      pattern,
+      rw,
+    }) => {
+      let intensity = '\x1b[97m'; // Bright or increased intensity
 
-    tableData.push([
-      `${intensity}${jobname.replace('{qd}', iodepth).replace('{t}', numjobs)}\x1b[0m`,
-      `${intensity}${pattern}\x1b[0m`,
-      `${intensity}${bs}\x1b[0m`,
-      `${intensity}${iodepth}\x1b[0m`,
-      `${intensity}${numjobs}\x1b[0m`,
-      `${intensity}\x1b[95m${kiBtoMib(bw).toFixed(2)}\x1b[0m`,
-      `${intensity}\x1b[94m${Math.round(iops)}\x1b[0m`,
-      `${intensity}\x1b[92m${ns2ms(latencyMin).toFixed(1)}\x1b[0m`,
-      `${intensity}\x1b[93m${ns2ms(latencyMean).toFixed(1)}\x1b[0m`,
-      `${intensity}\x1b[91m${ns2ms(latencyMax).toFixed(1)}\x1b[0m`,
-    ]);
+      if (rw.startsWith(MIXED)) {
+        intensity = '\x1b[2m'; // Faint or decreased intensity
+      }
+
+      if (rw.startsWith(RANDOM)) {
+        intensity = ''; // Normal intensity
+      }
+
+      tableData.push([
+        `${intensity}${jobname.replace('{qd}', iodepth).replace('{t}', numjobs)}\x1b[0m`,
+        `${intensity}${pattern}\x1b[0m`,
+        `${intensity}${bs}\x1b[0m`,
+        `${intensity}${iodepth}\x1b[0m`,
+        `${intensity}${numjobs}\x1b[0m`,
+        `${intensity}\x1b[95m${kiBtoMib(bw).toFixed(2)}\x1b[0m`,
+        `${intensity}\x1b[94m${Math.round(iops)}\x1b[0m`,
+        `${intensity}\x1b[92m${ns2ms(latencyMin).toFixed(1)}\x1b[0m`,
+        `${intensity}\x1b[93m${ns2ms(latencyMean).toFixed(1)}\x1b[0m`,
+        `${intensity}\x1b[91m${ns2ms(latencyMax).toFixed(1)}\x1b[0m`,
+      ]);
+    });
   });
-});
 
-console.log(table(
-  tableData,
-  TABLE_CONFIG,
-));
+  console.log(table(
+    tableData,
+    TABLE_CONFIG,
+  ));
