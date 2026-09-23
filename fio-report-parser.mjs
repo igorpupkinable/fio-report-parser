@@ -8,6 +8,14 @@ SSD tests. Not supported yet.
   - trimwrite: sequential trim+write sequences
   - randtrimwrite: like trimwrite, but uses random offsets rather than sequential writes
 */
+
+const CLIARGS = process.argv;
+const CSVOUT = CLIARGS.includes('--csv', 2) || CLIARGS.includes('-csv', 2)
+const CACHE_TITLE = {
+  '0': 'Buffered I/O',
+  '1': 'Non-buffered I/O (this is usually O_DIRECT)',
+};
+const FIRST_COLUMN_HEADER = 'Name';
 const IO_PATTERN = {
   randread: 'Random read',
   randrw: 'Random mixed',
@@ -21,14 +29,22 @@ const IO_PATTERN = {
   // trimwrite: sequential trim+write sequences
   // randtrimwrite: like trimwrite, but uses random offsets rather than sequential writes
 };
-const CACHE_TITLE = {
-  '0': 'Buffered I/O',
-  '1': 'Non-buffered I/O (this is usually O_DIRECT)',
-};
-const FIRST_COLUMN_HEADER = 'Name';
 const MIXED = 'mixed';
 const RANDOM = 'rand';
 const UNSUPPORTED_TYPE = '_UNSUPPORTED_';
+
+if (CLIARGS.length < (CSVOUT ? 4 : 3)) {
+  const baseFilename = path.basename(import.meta.url);
+
+  console.error('\x1b[31m%s\x1b[0m', 'Please provide FIO test results in JSON format.');
+  console.log('\x1b[33mExamples:\x1b[0m');
+  console.log('\t', `node ${baseFilename} ../path/to/report.json`);
+  console.log('\t', `node ${baseFilename} --csv ~/path/to/report.json`);
+
+  process.exit(1);
+}
+
+const REPORT_FILEPATH = CLIARGS[CSVOUT ? 3 : 2];
 
 const removeEscapeSequence = (str) => str.replace(/\x1b\[\d+m/g, '');
 const drawTable = (table) => {
@@ -98,21 +114,12 @@ const drawTable = (table) => {
 const kiBtoMib = (kiB) => kiB / 1024;
 const ns2ms = (ns) => ns / 1000000;
 
-if (process.argv.length === 2) {
-  console.error('\x1b[31m%s\x1b[0m', 'Please provide FIO test results in JSON format.');
-  console.log('\x1b[33mExample:\x1b[0m %s', `node ${path.basename(import.meta.url)} ./path/to/report.json`);
-
-  process.exit(1);
-}
-
-let filepath = process.argv[2];
-
-const parsingMessage = `Parsing ${filepath}`;
+const parsingMessage = `Parsing ${REPORT_FILEPATH}`;
 
 console.time(parsingMessage);
 
 const { default: report } = await import(
-  path.resolve(cwd(), filepath),
+  path.resolve(cwd(), REPORT_FILEPATH),
   { with: { type: 'json' } },
 );
 
