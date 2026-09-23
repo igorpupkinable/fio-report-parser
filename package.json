@@ -18,6 +18,7 @@
   },
   "homepage": "https://github.com/igorpupkinable/fio-report-parser#readme",
   "dependencies": {
+    "csv-stringify": "^6.8.3",
     "table": "^6.9.0"
   }
 }
