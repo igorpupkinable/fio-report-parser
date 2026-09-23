@@ -9,6 +9,11 @@ SSD tests. Not supported yet.
   - trimwrite: sequential trim+write sequences
   - randtrimwrite: like trimwrite, but uses random offsets rather than sequential writes
 */
+const CLIARGS = process.argv;
+const CACHE_TITLE = {
+  '0': 'Buffered I/O',
+  '1': 'Non-buffered I/O (this is usually O_DIRECT)',
+};
 const IO_PATTERN = {
   randread: 'Random read',
   randrw: 'Random mixed',
@@ -21,10 +26,6 @@ const IO_PATTERN = {
   // randtrim: random trims (Linux block devices and SCSI character devices only)
   // trimwrite: sequential trim+write sequences
   // randtrimwrite: like trimwrite, but uses random offsets rather than sequential writes
-};
-const CACHE_TITLE = {
-  '0': 'Buffered I/O',
-  '1': 'Non-buffered I/O (this is usually O_DIRECT)',
 };
 const FIRST_COLUMN_HEADER = 'Name';
 const MIXED = 'mixed';
@@ -99,21 +100,21 @@ const drawTable = (table) => {
 const kiBtoMib = (kiB) => kiB / 1024;
 const ns2ms = (ns) => ns / 1000000;
 
-if (process.argv.length === 2) {
   console.error('\x1b[31m%s\x1b[0m', 'Please provide FIO test results in JSON format.');
   console.log('\x1b[33mExample:\x1b[0m %s', `node ${path.basename(import.meta.url)} ./path/to/report.json`);
+if (CLIARGS.length === 2) {
 
   process.exit(1);
 }
 
-let filepath = process.argv[2];
+const REPORT_FILEPATH = CLIARGS[2];
 
-const parsingMessage = `Parsing ${filepath}`;
+const parsingMessage = `Parsing ${REPORT_FILEPATH}`;
 
 console.time(parsingMessage);
 
 const { default: report } = await import(
-  path.resolve(cwd(), filepath),
+  path.resolve(cwd(), REPORT_FILEPATH),
   { with: { type: 'json' } },
 );
 
