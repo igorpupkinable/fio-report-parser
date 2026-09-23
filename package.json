@@ -16,5 +16,8 @@
   "bugs": {
     "url": "https://github.com/igorpupkinable/fio-report-parser/issues"
   },
-  "homepage": "https://github.com/igorpupkinable/fio-report-parser#readme"
+  "homepage": "https://github.com/igorpupkinable/fio-report-parser#readme",
+  "dependencies": {
+    "table": "^6.9.0"
+  }
 }

@@ -1,5 +1,6 @@
-import path from 'node:path';
 import { cwd } from 'node:process';
+import { table } from 'table';
+import path from 'node:path';
 
 /*
 SSD tests. Not supported yet.
