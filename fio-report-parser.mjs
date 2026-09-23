@@ -52,9 +52,10 @@ const options = getopts(
   {
     alias: {
       header: ['h'],
+      quiet: ['q'],
       report: ['r'],
     },
-    boolean: ['csv', 'header'],
+    boolean: ['csv', 'header', 'quiet'],
     string: ['report'],
   },
 );
@@ -66,25 +67,29 @@ if (!options.report.endsWith('.json')) {
   console.log('\x1b[33mExamples:\x1b[0m');
   console.log('\t', `node ${baseFilename} --report=../path/to/report.json`);
   console.log('\t', `node ${baseFilename} --csv -r ~/path/to/report.json`);
+  console.log('\t', `node ${baseFilename} --csv --quiet -r ~/path/to/report.json`);
+  console.log('\t', `node ${baseFilename} --csv --no-csv-header -q -r ~/path/to/report.json`);
 
   process.exit(1);
 }
 
 const parsingMessage = `Parsing ${options.report}`;
 
-console.time(parsingMessage);
+!options.quiet && console.time(parsingMessage);
 
 const { default: report } = await import(
   path.resolve(cwd(), options.report),
   { with: { type: 'json' } },
 );
 
-console.timeEnd(parsingMessage);
+!options.quiet && console.timeEnd(parsingMessage);
 
 const globalOptions = report['global options'];
 
-console.info(`Tests were executed in ${globalOptions.directory}`);
-console.info('\x1b[1m%s\x1b[0m', CACHE_TITLE[globalOptions?.direct ?? 0], 'was used in tests.\n');
+if (!options.quiet) {
+  console.info(`Tests were executed in ${globalOptions.directory}`);
+  console.info('\x1b[1m%s\x1b[0m', CACHE_TITLE[globalOptions?.direct ?? 0], 'was used in tests.\n');
+}
 
 const jobs = report.jobs.reduce(
   (
@@ -98,7 +103,7 @@ const jobs = report.jobs.reduce(
     },
   ) => {
     if (error > 0) {
-      console.warn('\x1b[33m%s\x1b[0m', `${jobname} job has error. Skipping...`);
+      !options.quiet && console.warn('\x1b[33m%s\x1b[0m', `${jobname} job has error. Skipping...`);
     } else {
       let type;
 
@@ -120,7 +125,7 @@ const jobs = report.jobs.reduce(
           type = MIXED;
           break;
         default:
-          console.error(`\x1b[1m\x1b[41mUnsupported job found: ${jobname} of type ${options.rw}. Skipping...\x1b[0m`);
+          !options.quiet && console.error(`\x1b[1m\x1b[41mUnsupported job found: ${jobname} of type ${options.rw}. Skipping...\x1b[0m`);
       }
 
       const job = Object.assign(
@@ -159,7 +164,7 @@ const jobs = report.jobs.reduce(
 );
 
 if (jobs.length > 0) {
-  console.info('\x1b[32m%s\x1b[0m', `${jobs.length} successful jobs found.`);
+  !options.quiet && console.info('\x1b[32m%s\x1b[0m', `${jobs.length} successful jobs found.`);
 } else {
   console.info('\x1b[31m%s\x1b[0m', 'No successful jobs found.');
   process.exit();
@@ -176,7 +181,7 @@ const jobGroups = Object.groupBy(jobs, ({ rw }) => {
     return rw.replace(MIXED, '');
   }
 
-  console.warn('\x1b[33m%s\x1b[0m', `Skip unsupported job type: ${rw}`);
+  !options.quiet && console.warn('\x1b[33m%s\x1b[0m', `Skip unsupported job type: ${rw}`);
 
   return UNSUPPORTED_TYPE;
 });
