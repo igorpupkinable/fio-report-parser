@@ -18,7 +18,7 @@ const HEADERS = [
   'Name',
   'IO pattern',
   'Block size',
-  'QD',
+  'Queue depth',
   'Threads',
   'MB/s',
   'IOPS',
