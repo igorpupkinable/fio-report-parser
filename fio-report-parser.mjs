@@ -1,6 +1,7 @@
 import { cwd } from 'node:process';
 import { stringify } from "csv-stringify/sync";
 import { table } from 'table';
+import getopts from 'getopts';
 import path from 'node:path';
 
 /*
@@ -11,8 +12,6 @@ SSD tests. Not supported yet.
   - randtrimwrite: like trimwrite, but uses random offsets rather than sequential writes
 */
 
-const CLIARGS = process.argv;
-const CSVOUT = CLIARGS.includes('--csv', 2) || CLIARGS.includes('-csv', 2)
 const CACHE_TITLE = {
   '0': 'Buffered I/O',
   '1': 'Non-buffered I/O (this is usually O_DIRECT)',
@@ -48,25 +47,34 @@ const UNSUPPORTED_TYPE = '_UNSUPPORTED_';
 
 const kiBtoMib = (kiB) => kiB / 1024;
 const ns2ms = (ns) => ns / 1000000;
+const options = getopts(
+  process.argv.slice(2),
+  {
+    alias: {
+      report: ['r'],
+    },
+    boolean: ['csv'],
+    string: ['report'],
+  },
+);
 
-if (CLIARGS.length < (CSVOUT ? 4 : 3)) {
+if (!options.report.endsWith('.json')) {
   const baseFilename = path.basename(import.meta.url);
 
   console.error('\x1b[31m%s\x1b[0m', 'Please provide FIO test results in JSON format.');
   console.log('\x1b[33mExamples:\x1b[0m');
-  console.log('\t', `node ${baseFilename} ../path/to/report.json`);
-  console.log('\t', `node ${baseFilename} --csv ~/path/to/report.json`);
+  console.log('\t', `node ${baseFilename} --report=../path/to/report.json`);
+  console.log('\t', `node ${baseFilename} --csv -r ~/path/to/report.json`);
 
   process.exit(1);
 }
 
-const REPORT_FILEPATH = CLIARGS[CSVOUT ? 3 : 2];
-const parsingMessage = `Parsing ${REPORT_FILEPATH}`;
+const parsingMessage = `Parsing ${options.report}`;
 
 console.time(parsingMessage);
 
 const { default: report } = await import(
-  path.resolve(cwd(), REPORT_FILEPATH),
+  path.resolve(cwd(), options.report),
   { with: { type: 'json' } },
 );
 
@@ -174,7 +182,7 @@ const jobGroups = Object.groupBy(jobs, ({ rw }) => {
 
 delete jobGroups[UNSUPPORTED_TYPE];
 
-if (CSVOUT) {
+if (options.csv) {
   const csvData = [HEADERS];
 
   Object.entries(jobGroups).forEach(([k, v]) => {
