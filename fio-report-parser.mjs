@@ -1,5 +1,5 @@
-const { resolve } = require('node:path');
-const { cwd } = require('node:process');
+import path from 'node:path';
+import { cwd } from 'node:process';
 
 /*
 SSD tests. Not supported yet.
@@ -100,22 +100,21 @@ const ns2ms = (ns) => ns / 1000000;
 
 if (process.argv.length === 2) {
   console.error('\x1b[31m%s\x1b[0m', 'Please provide FIO test results in JSON format.');
-  console.log('\x1b[33mExample:\x1b[0m %s', `node ${__filename} ./path/to/report.json`);
+  console.log('\x1b[33mExample:\x1b[0m %s', `node ${path.basename(import.meta.url)} ./path/to/report.json`);
 
   process.exit(1);
 }
 
 let filepath = process.argv[2];
 
-if (!(filepath.startsWith('./') || filepath.startsWith('/'))) {
-  filepath = `./${filepath}`;
-}
-
 const parsingMessage = `Parsing ${filepath}`;
 
 console.time(parsingMessage);
 
-const report = require(resolve(cwd(), filepath));
+const { default: report } = await import(
+  path.resolve(cwd(), filepath),
+  { with: { type: 'json' } },
+);
 
 console.timeEnd(parsingMessage);
 
@@ -146,7 +145,7 @@ const jobs = report.jobs.reduce(
         case 'read':
           type = read;
           break;
-        // Read
+        // Write
         case 'randwrite':
         case 'write':
           type = write;
