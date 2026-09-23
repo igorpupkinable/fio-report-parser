@@ -103,7 +103,7 @@ const ns2ms = (ns) => ns / 1000000;
 if (CLIARGS.length === 2) {
   const baseFilename = path.basename(import.meta.url);
 
-  onsole.error('\x1b[31m%s\x1b[0m', 'Please provide FIO test results in JSON format.');
+  console.error('\x1b[31m%s\x1b[0m', 'Please provide FIO test results in JSON format.');
   console.log('\x1b[33mExamples:\x1b[0m');
   console.log('\t', `node ${baseFilename} ../path/to/report.json`);
   console.log('\t', `node ${baseFilename} ~/path/to/report.json`);
