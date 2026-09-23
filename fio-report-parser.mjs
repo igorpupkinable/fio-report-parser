@@ -1,5 +1,6 @@
-import path from 'node:path';
 import { cwd } from 'node:process';
+import { table } from 'table';
+import path from 'node:path';
 
 /*
 SSD tests. Not supported yet.
@@ -8,6 +9,23 @@ SSD tests. Not supported yet.
   - trimwrite: sequential trim+write sequences
   - randtrimwrite: like trimwrite, but uses random offsets rather than sequential writes
 */
+const CLIARGS = process.argv;
+const CACHE_TITLE = {
+  '0': 'Buffered I/O',
+  '1': 'Non-buffered I/O (this is usually O_DIRECT)',
+};
+const HEADERS = [
+  'Name',
+  'IO pattern',
+  'Block size',
+  'Queue depth',
+  'Threads',
+  'MB/s',
+  'IOPS',
+  'Min latency (ms)',
+  'Mean latency (ms)',
+  'Max latency (ms)',
+];
 const IO_PATTERN = {
   randread: 'Random read',
   randrw: 'Random mixed',
@@ -21,98 +39,32 @@ const IO_PATTERN = {
   // trimwrite: sequential trim+write sequences
   // randtrimwrite: like trimwrite, but uses random offsets rather than sequential writes
 };
-const CACHE_TITLE = {
-  '0': 'Buffered I/O',
-  '1': 'Non-buffered I/O (this is usually O_DIRECT)',
-};
-const FIRST_COLUMN_HEADER = 'Name';
 const MIXED = 'mixed';
 const RANDOM = 'rand';
 const UNSUPPORTED_TYPE = '_UNSUPPORTED_';
 
-const removeEscapeSequence = (str) => str.replace(/\x1b\[\d+m/g, '');
-const drawTable = (table) => {
-  const thead = table.reduce(
-    (acc, row) => {
-      Object.entries(row).forEach(([k, v]) => {
-        const keyLength = k.length;
-        const valueLength = removeEscapeSequence(v.toString()).length;
-        const l = keyLength > valueLength ? keyLength : valueLength;
-
-        if (!acc[k] || acc[k] < l) {
-          acc[k] = l;
-        }
-      });
-
-      return acc;
-    },
-    {},
-  );
-  const tbody = table.reduce(
-    (acc, row) => {
-      const tr = {};
-
-      Object.entries(row).forEach(([k, v]) => {
-        const val = v.toString();
-        const targetLength = val.length - removeEscapeSequence(val).length + thead[k];
-
-        tr[k] = val[k === FIRST_COLUMN_HEADER ? 'padEnd' : 'padStart'](targetLength);
-      });
-      acc.push(tr);
-
-      return acc;
-    },
-    [],
-  );
-  const lanes = [
-    ['┌'],
-    ['│'],
-    ['├'],
-    ...Array.from(
-      { length: tbody.length },
-      () => ['│'], // Must be new array for each lane.
-    ),
-    ['└'],
-  ];
-  const tfootIndex = lanes.length - 1;
-
-  // Populate table with header, rows and footer.
-  Object.entries(thead).forEach(([k, v]) => {
-    lanes[0].push('─'.repeat(v + 2), '┬'); // +2 = spaces before and after column label.
-    lanes[1].push(` ${k.padEnd(v)} `, '│');
-    lanes[2].push('─'.repeat(v + 2), '┼');
-    tbody.forEach((td, index) => {
-      lanes[3 + index].push(` ${td[k] ?? ''.padEnd(v)} `, '│');
-    });
-    lanes[tfootIndex].push('─'.repeat(v + 2), '┴');
-  });
-
-  lanes[0] = lanes[0].with(-1, '┐');
-  lanes[2] = lanes[2].with(-1, '┤');
-  lanes[tfootIndex] = lanes[tfootIndex].with(-1, '┘');
-
-  lanes.forEach((line) => {
-    console.log(line.join(''));
-  });
-};
 const kiBtoMib = (kiB) => kiB / 1024;
 const ns2ms = (ns) => ns / 1000000;
 
-if (process.argv.length === 2) {
+if (CLIARGS.length === 2) {
+  const baseFilename = path.basename(import.meta.url);
+
   console.error('\x1b[31m%s\x1b[0m', 'Please provide FIO test results in JSON format.');
-  console.log('\x1b[33mExample:\x1b[0m %s', `node ${path.basename(import.meta.url)} ./path/to/report.json`);
+  console.log('\x1b[33mExamples:\x1b[0m');
+  console.log('\t', `node ${baseFilename} ../path/to/report.json`);
+  console.log('\t', `node ${baseFilename} ~/path/to/report.json`);
 
   process.exit(1);
 }
 
-let filepath = process.argv[2];
+const REPORT_FILEPATH = CLIARGS[2];
 
-const parsingMessage = `Parsing ${filepath}`;
+const parsingMessage = `Parsing ${REPORT_FILEPATH}`;
 
 console.time(parsingMessage);
 
 const { default: report } = await import(
-  path.resolve(cwd(), filepath),
+  path.resolve(cwd(), REPORT_FILEPATH),
   { with: { type: 'json' } },
 );
 
@@ -217,13 +169,38 @@ const jobGroups = Object.groupBy(jobs, ({ rw }) => {
 
   return UNSUPPORTED_TYPE;
 });
-const table = [];
 
 delete jobGroups[UNSUPPORTED_TYPE];
+
+const ALIGNMENT_LEFT = 'left';
+const TABLE_CONFIG = {
+  columnDefault: {
+    alignment: 'right',
+  },
+  columns: [
+    { alignment: ALIGNMENT_LEFT },
+    {}, // IO pattern
+    { width: HEADERS[2].length },
+    { width: HEADERS[3].length },
+    { width: HEADERS[4].length },
+    {}, // Bandwidth
+    {}, // IOPS
+    { width: HEADERS[7].length },
+    { width: HEADERS[8].length },
+    { width: HEADERS[9].length },
+  ],
+  drawHorizontalLine: (lineIndex, rowCount) => {
+    return lineIndex === 0 || lineIndex === 1 || lineIndex === rowCount;
+  },
+  spanningCells: HEADERS.map((header, index) => ({ col: index, row: 0, colSpan: 1, alignment: index === 0 ? ALIGNMENT_LEFT : 'center' }))
+};
+const tableData = [HEADERS];
+
 Object.entries(jobGroups).forEach(([k, v]) => {
-  table.push({
-    [FIRST_COLUMN_HEADER]: `\x1b[100m[${k.toUpperCase()}]\x1b[0m`,
-  });
+  const groupRow = Array(HEADERS.length - 1).fill('');
+
+  groupRow.unshift(`\x1b[100m[${k.toUpperCase()}]\x1b[0m`);
+  tableData.push(groupRow);
   v.forEach(({
     bs,
     bw,
@@ -249,19 +226,22 @@ Object.entries(jobGroups).forEach(([k, v]) => {
       intensity = ''; // Normal intensity
     }
 
-    table.push({
-      [FIRST_COLUMN_HEADER]: `${intensity}${jobname.replace('{qd}', iodepth).replace('{t}', numjobs)}\x1b[0m`,
-      'IO pattern': `${intensity}${pattern}\x1b[0m`,
-      'Block size': `${intensity}${bs}\x1b[0m`,
-      'Queue depth': `${intensity}${iodepth}\x1b[0m`,
-      'Threads': `${intensity}${numjobs}\x1b[0m`,
-      'MB/s': `${intensity}\x1b[95m${kiBtoMib(bw).toFixed(2)}\x1b[0m`,
-      'IOPS': `${intensity}\x1b[94m${Math.round(iops)}\x1b[0m`,
-      'Min latency (ms)': `${intensity}\x1b[92m${ns2ms(latencyMin).toFixed(1)}\x1b[0m`,
-      'Mean latency (ms)': `${intensity}\x1b[93m${ns2ms(latencyMean).toFixed(1)}\x1b[0m`,
-      'Max latency (ms)': `${intensity}\x1b[91m${ns2ms(latencyMax).toFixed(1)}\x1b[0m`,
-    });
+    tableData.push([
+      `${intensity}${jobname.replace('{qd}', iodepth).replace('{t}', numjobs)}\x1b[0m`,
+      `${intensity}${pattern}\x1b[0m`,
+      `${intensity}${bs}\x1b[0m`,
+      `${intensity}${iodepth}\x1b[0m`,
+      `${intensity}${numjobs}\x1b[0m`,
+      `${intensity}\x1b[95m${kiBtoMib(bw).toFixed(2)}\x1b[0m`,
+      `${intensity}\x1b[94m${Math.round(iops)}\x1b[0m`,
+      `${intensity}\x1b[92m${ns2ms(latencyMin).toFixed(1)}\x1b[0m`,
+      `${intensity}\x1b[93m${ns2ms(latencyMean).toFixed(1)}\x1b[0m`,
+      `${intensity}\x1b[91m${ns2ms(latencyMax).toFixed(1)}\x1b[0m`,
+    ]);
   });
 });
 
-drawTable(table);
+console.log(table(
+  tableData,
+  TABLE_CONFIG,
+));
