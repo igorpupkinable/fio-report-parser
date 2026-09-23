@@ -51,9 +51,10 @@ const options = getopts(
   process.argv.slice(2),
   {
     alias: {
+      header: ['h'],
       report: ['r'],
     },
-    boolean: ['csv'],
+    boolean: ['csv', 'header'],
     string: ['report'],
   },
 );
@@ -183,7 +184,7 @@ const jobGroups = Object.groupBy(jobs, ({ rw }) => {
 delete jobGroups[UNSUPPORTED_TYPE];
 
 if (options.csv) {
-  const csvData = [HEADERS];
+  const csvData = options.header ? [HEADERS] : [];
 
   Object.entries(jobGroups).forEach(([k, v]) => {
     v.forEach(({
