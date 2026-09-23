@@ -146,7 +146,7 @@ const jobs = report.jobs.reduce(
         case 'read':
           type = read;
           break;
-        // Read
+        // Write
         case 'randwrite':
         case 'write':
           type = write;
