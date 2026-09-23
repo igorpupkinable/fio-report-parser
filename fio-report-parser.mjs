@@ -1,4 +1,5 @@
 import { cwd } from 'node:process';
+import { stringify } from "csv-stringify/sync";
 import { table } from 'table';
 import path from 'node:path';
 
@@ -173,6 +174,42 @@ const jobGroups = Object.groupBy(jobs, ({ rw }) => {
 
 delete jobGroups[UNSUPPORTED_TYPE];
 
+if (CSVOUT) {
+  const csvData = [HEADERS];
+
+  Object.entries(jobGroups).forEach(([k, v]) => {
+    v.forEach(({
+      bs,
+      bw,
+      clat_ns: {
+        max: latencyMax,
+        mean: latencyMean,
+        min: latencyMin,
+      },
+      iodepth = 1,
+      iops,
+      jobname,
+      numjobs = 1,
+      pattern,
+      rw,
+    }) => {
+      csvData.push([
+        jobname.replace('{qd}', iodepth).replace('{t}', numjobs),
+        pattern,
+        bs,
+        iodepth,
+        numjobs,
+        kiBtoMib(bw).toFixed(2),
+        Math.round(iops),
+        ns2ms(latencyMin).toFixed(1),
+        ns2ms(latencyMean).toFixed(1),
+        ns2ms(latencyMax).toFixed(1),
+      ]);
+    });
+  });
+
+  console.log(stringify(csvData));
+} else {
   const ALIGNMENT_LEFT = 'left';
   const TABLE_CONFIG = {
     columnDefault: {
@@ -246,3 +283,4 @@ delete jobGroups[UNSUPPORTED_TYPE];
     tableData,
     TABLE_CONFIG,
   ));
+}
