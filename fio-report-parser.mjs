@@ -107,10 +107,6 @@ if (process.argv.length === 2) {
 
 let filepath = process.argv[2];
 
-if (!(filepath.startsWith('./') || filepath.startsWith('/'))) {
-  filepath = `./${filepath}`;
-}
-
 const parsingMessage = `Parsing ${filepath}`;
 
 console.time(parsingMessage);
