@@ -172,7 +172,6 @@ const jobGroups = Object.groupBy(jobs, ({ rw }) => {
 
 delete jobGroups[UNSUPPORTED_TYPE];
 
-const ALIGNMENT_CENTER = 'center';
 const ALIGNMENT_LEFT = 'left';
 const TABLE_CONFIG = {
   columnDefault: {
@@ -193,18 +192,7 @@ const TABLE_CONFIG = {
   drawHorizontalLine: (lineIndex, rowCount) => {
     return lineIndex === 0 || lineIndex === 1 || lineIndex === rowCount;
   },
-  spanningCells: [
-    { col: 0, row: 0, colSpan: 1, alignment: ALIGNMENT_LEFT },
-    { col: 1, row: 0, colSpan: 1, alignment: ALIGNMENT_CENTER },
-    { col: 2, row: 0, colSpan: 1, alignment: ALIGNMENT_CENTER },
-    { col: 3, row: 0, colSpan: 1, alignment: ALIGNMENT_CENTER },
-    { col: 4, row: 0, colSpan: 1, alignment: ALIGNMENT_CENTER },
-    { col: 5, row: 0, colSpan: 1, alignment: ALIGNMENT_CENTER },
-    { col: 6, row: 0, colSpan: 1, alignment: ALIGNMENT_CENTER },
-    { col: 7, row: 0, colSpan: 1, alignment: ALIGNMENT_CENTER },
-    { col: 8, row: 0, colSpan: 1, alignment: ALIGNMENT_CENTER },
-    { col: 9, row: 0, colSpan: 1, alignment: ALIGNMENT_CENTER },
-  ],
+  spanningCells: HEADERS.map((header, index) => ({ col: index, row: 0, colSpan: 1, alignment: index === 0 ? ALIGNMENT_LEFT : 'center' }))
 };
 const tableData = [HEADERS];
 
