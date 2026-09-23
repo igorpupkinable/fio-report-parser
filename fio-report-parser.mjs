@@ -9,7 +9,9 @@ SSD tests. Not supported yet.
   - trimwrite: sequential trim+write sequences
   - randtrimwrite: like trimwrite, but uses random offsets rather than sequential writes
 */
+
 const CLIARGS = process.argv;
+const CSVOUT = CLIARGS.includes('--csv', 2) || CLIARGS.includes('-csv', 2)
 const CACHE_TITLE = {
   '0': 'Buffered I/O',
   '1': 'Non-buffered I/O (this is usually O_DIRECT)',
@@ -46,19 +48,18 @@ const UNSUPPORTED_TYPE = '_UNSUPPORTED_';
 const kiBtoMib = (kiB) => kiB / 1024;
 const ns2ms = (ns) => ns / 1000000;
 
-if (CLIARGS.length === 2) {
+if (CLIARGS.length < (CSVOUT ? 4 : 3)) {
   const baseFilename = path.basename(import.meta.url);
 
   console.error('\x1b[31m%s\x1b[0m', 'Please provide FIO test results in JSON format.');
   console.log('\x1b[33mExamples:\x1b[0m');
   console.log('\t', `node ${baseFilename} ../path/to/report.json`);
-  console.log('\t', `node ${baseFilename} ~/path/to/report.json`);
+  console.log('\t', `node ${baseFilename} --csv ~/path/to/report.json`);
 
   process.exit(1);
 }
 
-const REPORT_FILEPATH = CLIARGS[2];
-
+const REPORT_FILEPATH = CLIARGS[CSVOUT ? 3 : 2];
 const parsingMessage = `Parsing ${REPORT_FILEPATH}`;
 
 console.time(parsingMessage);
